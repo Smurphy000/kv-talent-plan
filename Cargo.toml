@@ -1,0 +1,15 @@
+[package]
+name = "kvs"
+version = "0.1.0"
+authors = [""]
+description = "A key-value store"
+edition = "2018"
+
+[dependencies]
+clap = { version = "4.5.7", features = ["derive"] }
+tempfile = "3.14.0"
+walkdir = "2.5.0"
+
+[dev-dependencies]
+assert_cmd = "2.0.14"
+predicates = "3.1.0"
