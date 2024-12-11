@@ -26,7 +26,7 @@ fn main() -> Result<(), KVSError> {
     match &cli.command {
         Some(Commands::Set { k, v }) => {
             store.set(k.to_string(), v.to_string())?;
-            Ok(())
+            ()
         }
         Some(Commands::Get { k }) => {
             let v = store.get(k.to_string())?;
@@ -34,15 +34,17 @@ fn main() -> Result<(), KVSError> {
                 Some(v) => println!("{}", v),
                 None => println!("Key not found"),
             }
-            Ok(())
+            ()
         }
         Some(Commands::Rm { k }) => match store.remove(k.to_string()) {
-            Ok(_) => Ok(()),
+            Ok(_) => (),
             Err(e) => {
                 println!("Key not found");
-                Err(KVSError::DSError(e))
+                return Err(KVSError::DSError(e));
             }
         },
-        _ => Err(KVSError::CLIError(CLIError::NoCommand)),
+        _ => return Err(KVSError::CLIError(CLIError::NoCommand)),
     }
+    // println!("{:?}", store);
+    Ok(())
 }
