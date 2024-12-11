@@ -1,10 +1,8 @@
 use serde::{Deserialize, Serialize};
-use serde_json::{de::IoRead, StreamDeserializer};
 
 use crate::DataStoreError;
 use std::{
     collections::HashMap,
-    env,
     fs::{File, OpenOptions},
     io::{Read, Seek, SeekFrom, Write},
     path::Path,

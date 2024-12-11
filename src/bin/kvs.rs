@@ -1,7 +1,7 @@
 use clap::{Parser, Subcommand};
 use kvs::{CLIError, KVSError, KvStore};
 use std::env;
-use std::{io::Error, os, path::Path};
+use std::path::Path;
 
 #[derive(Parser)]
 #[command(version, about, long_about=None)]
