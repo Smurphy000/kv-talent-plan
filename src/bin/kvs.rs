@@ -1,5 +1,5 @@
 use clap::{Parser, Subcommand};
-use kvs::{CLIError, KVSError, KvStore};
+use kvs::{KvStore, KvsError, Result};
 use std::env;
 use std::path::Path;
 
@@ -16,7 +16,7 @@ enum Commands {
     Get { k: String },
     Rm { k: String },
 }
-fn main() -> Result<(), KVSError> {
+fn main() -> Result<()> {
     let cli = Cli::parse();
 
     let log_path = env::current_dir()?;
@@ -40,10 +40,10 @@ fn main() -> Result<(), KVSError> {
             Ok(_) => (),
             Err(e) => {
                 println!("Key not found");
-                return Err(KVSError::DSError(e));
+                return Err(e);
             }
         },
-        _ => return Err(KVSError::CLIError(CLIError::NoCommand)),
+        _ => return Err(KvsError::NoCommand),
     }
     // println!("{:?}", store);
     Ok(())

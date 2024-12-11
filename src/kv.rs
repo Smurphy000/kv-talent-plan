@@ -1,6 +1,6 @@
 use serde::{Deserialize, Serialize};
 
-use crate::DataStoreError;
+use crate::{KvsError, Result};
 use std::{
     collections::HashMap,
     fs::{File, OpenOptions},
@@ -14,9 +14,9 @@ use std::{
 /// Example:
 ///
 /// ```rust
-/// # use kvs::{KvStore, DataStoreError};
+/// # use kvs::{KvStore,Result};
 /// # use std::env;
-/// # fn try_main() -> Result<(),DataStoreError>{
+/// # fn try_main() -> Result<()>{
 /// let dir = env::current_dir()?;
 /// let mut store = KvStore::open(&dir)?;
 /// store.set("key".to_owned(), "value".to_owned())?;
@@ -53,13 +53,13 @@ impl<'a> WAL<'a> {
     }
 
     // overwrite the existing log with an empty file
-    fn clear(&self) -> Result<(), DataStoreError> {
+    fn clear(&self) -> Result<()> {
         File::create(self.path.join(self.file))?;
         Ok(())
     }
 
     // Stream read the log into a vector of commands
-    fn stream(&self) -> Result<Vec<Commands>, DataStoreError> {
+    fn stream(&self) -> Result<Vec<Commands>> {
         let f = File::open(self.path.join(self.file))?;
         let commands = serde_json::Deserializer::from_reader(&f)
             .into_iter::<Commands>()
@@ -69,7 +69,7 @@ impl<'a> WAL<'a> {
     }
 
     // Read one command based off its position in the log
-    fn read_one(&self, offsets: (usize, usize)) -> Result<Commands, DataStoreError> {
+    fn read_one(&self, offsets: (usize, usize)) -> Result<Commands> {
         let mut handle = OpenOptions::new()
             .read(true)
             .open(self.path.join(self.file))?;
@@ -84,7 +84,7 @@ impl<'a> WAL<'a> {
     }
 
     // append some serialized data to the log
-    fn append(&mut self, data: String) -> Result<usize, DataStoreError> {
+    fn append(&mut self, data: String) -> Result<usize> {
         let mut handle = OpenOptions::new()
             .write(true)
             .append(true)
@@ -120,7 +120,7 @@ impl<'a> KvStore<'a> {
     /// Sets the value of a string key to a string.
     ///
     /// If the key already exists, the previous value will be overwritten.
-    pub fn set(&mut self, key: String, value: String) -> Result<(), DataStoreError> {
+    pub fn set(&mut self, key: String, value: String) -> Result<()> {
         //! this may be an extra clone
         let v = serde_json::to_string(&Commands::Set(key.clone(), value.clone()))?;
         let num_bytes = self.wal.append(v)?;
@@ -137,7 +137,7 @@ impl<'a> KvStore<'a> {
     /// Gets the string value of a given string key.
     ///
     /// Returns `None` if the given key does not exist.
-    pub fn get(&self, key: String) -> Result<Option<String>, DataStoreError> {
+    pub fn get(&self, key: String) -> Result<Option<String>> {
         if let Some(offsets) = self.map.get(&key).cloned() {
             match self.wal.read_one(offsets)? {
                 Commands::Set(_, v) => return Ok(Some(v)),
@@ -150,9 +150,9 @@ impl<'a> KvStore<'a> {
     }
 
     /// Remove a given key.
-    pub fn remove(&mut self, key: String) -> Result<(), DataStoreError> {
+    pub fn remove(&mut self, key: String) -> Result<()> {
         if !self.map.contains_key(&key) {
-            return Err(DataStoreError::KeyNotFound);
+            return Err(KvsError::KeyNotFound);
         }
         let v = serde_json::to_string(&Commands::Rm(key.clone()))?;
         let _ = self.wal.append(v);
@@ -164,7 +164,7 @@ impl<'a> KvStore<'a> {
     }
 
     /// Compact the log file when it exceeds a certain size threshold
-    fn compact(&mut self) -> Result<(), DataStoreError> {
+    fn compact(&mut self) -> Result<()> {
         // take a stream of Commands from the wal, into a map
         // also keep an ordered vec of keys to rebuild the log.
         let mut mapping: HashMap<String, String> = HashMap::new();
@@ -196,7 +196,7 @@ impl<'a> KvStore<'a> {
     }
 
     /// Initializes the in-mem index by regenerating from the existing log
-    fn intialize_index(&mut self, path: &Path) -> Result<(), DataStoreError> {
+    fn intialize_index(&mut self, path: &Path) -> Result<()> {
         let f = File::open(path)?;
         let mut map: HashMap<String, (usize, usize)> = HashMap::new();
 
@@ -235,7 +235,7 @@ impl<'a> KvStore<'a> {
     }
 
     /// Open and intialize in-mem index from provided log file
-    pub fn open(path: &Path) -> Result<KvStore, DataStoreError> {
+    pub fn open(path: &Path) -> Result<KvStore> {
         let file_name = "log.txt";
         let f = path.join(file_name);
         if !f.exists() {
